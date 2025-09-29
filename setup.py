@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name="py_supabase_rest",
-    version="1.1.1",
-    packages=find_packages(),
+    version="1.2.0",
+    packages=find_packages(include=["py_supabase_rest", "py_supabase_rest.*"]),
     install_requires=[
         "fastapi",
         "uvicorn",

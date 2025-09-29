@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import router
+from py_supabase_rest.app.routers import router
 
 app = FastAPI(title="PLC Power Cloud API")
 

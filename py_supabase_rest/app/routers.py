@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from app.models import PLCData
-from app.crud import get_all_data, insert_data
+from py_supabase_rest.app.models import PLCData
+from py_supabase_rest.app.crud import get_all_data, insert_data
 
 router = APIRouter(prefix="/plc", tags=["PLC Data"])
 

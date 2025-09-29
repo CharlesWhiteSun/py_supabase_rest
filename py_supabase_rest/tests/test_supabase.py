@@ -1,4 +1,4 @@
-from app.config import supabase
+from py_supabase_rest.app.config import supabase
 
 def test_connection():
     try:

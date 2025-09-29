@@ -1,5 +1,5 @@
-from app.config import supabase
-from app.models import PLCData
+from py_supabase_rest.app.config import supabase
+from py_supabase_rest.app.models import PLCData
 
 TABLE_NAME = "plc_device"
 

@@ -5,7 +5,7 @@ import signal
 def run_uvicorn():
     try:
         process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "main:app"],
+            [sys.executable, "-m", "uvicorn", "py_supabase_rest.main:app"],
             stdout=sys.stdout,
             stderr=sys.stderr
         )
