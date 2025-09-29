@@ -5,21 +5,21 @@ import signal
 def run_uvicorn():
     try:
         process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "main:app", "--reload"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            [sys.executable, "-m", "uvicorn", "main:app"],
+            stdout=sys.stdout,
+            stderr=sys.stderr
         )
 
         def signal_handler(sig, frame):
             print("\n🛑 Gracefully shutting down...")
-            process.terminate()  # 停止 uvicorn
+            process.terminate()
             process.wait()
             sys.exit(0)
 
-        signal.signal(signal.SIGINT, signal_handler)   # CTRL+C
-        signal.signal(signal.SIGTERM, signal_handler)  # 終止信號
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
 
-        stdout, stderr = process.communicate()
+        process.wait()
 
     except Exception as e:
         print(f"啟動失敗: {e}")

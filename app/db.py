@@ -8,6 +8,6 @@ def get_all_data():
     return response.data
 
 def insert_data(data: PLCData):
-    record = data.dict()
+    record = data.model_dump()
     response = supabase.table(TABLE_NAME).insert(record).execute()
     return response.data
