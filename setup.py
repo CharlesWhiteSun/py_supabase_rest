@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="py_supabase_rest",
-    version="1.2.1",
+    version="1.3.0",
     author="Charles",
     author_email="charleswhitesun@gmail.com",
     description="A Python client for Supabase REST API",
