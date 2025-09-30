@@ -1,9 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query
 from enum import Enum
-from typing import Optional
-from py_supabase_rest.app.services.plc_device_service import get_data_by_deviceID_and_time
-from py_supabase_rest.app.services.plc_chart_service import generate_metric_chart_and_save, generate_metric_chart_interactive
+from typing import List
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
+from py_supabase_rest.app.services.plc_device_service import get_data_by_deviceID_and_time
+from py_supabase_rest.app.services.plc_chart_service import (
+    generate_metric_chart_and_save, 
+    generate_metric_chart_interactive,
+    generate_metric_chart_3d,
+)
 
 router = APIRouter(
     prefix="/plc-chart",
@@ -118,8 +122,8 @@ class Mode(str, Enum):
 
 @router.get(
     "/device-line_drawing", 
-    summary="產生 PLC Device 電壓與電流圖表", 
-    description="可選擇輸出電壓或電流，存圖並回傳成功訊息"
+    summary="產生 PLC 設備電壓, 電流圖表", 
+    description="可輸出電壓或電流折線圖並直接另存圖片"
 )
 async def get_device_line_drawing(
     device_id: DeviceID = Query(default=DeviceID.PLC_001, description="裝置 ID"),
@@ -130,7 +134,7 @@ async def get_device_line_drawing(
     end_hh: HourEnum = Query(default=HourEnum.h13, description="結束小時"),
     end_mm: MinuteSecondEnum = Query(default=MinuteSecondEnum.ms10, description="結束分鐘"),
     metric: Metric = Query(default=Metric.voltage, description="選擇輸出的數據類型"),
-    mode: Mode = Query(default=Mode.static, description="輸出模式：static=靜態圖片, interactive=互動式網頁圖表")
+    mode: Mode = Query(default=Mode.interactive, description="輸出模式：static=靜態圖片, interactive=互動式網頁圖表")
 ):
     """
     依 device_id 與時間區間，產生電壓或電流的線圖，存圖並回傳檔案路徑
@@ -169,3 +173,52 @@ async def get_device_line_drawing(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get(
+    "/device-line_drawing/3d",
+    summary="產生 PLC 多設備 3D 折線圖",
+    description="支援 3D 互動式或靜態圖表"
+)
+async def get_device_line_drawing_3d(
+    device_ids: List[DeviceID] = Query(default=[DeviceID.PLC_001], description="請至少選擇一個裝置 ID(按住 Ctrl 以便多選)"),
+    start_date: DateEnum = Query(default=DateEnum.date1, description="開始日期"),
+    start_hh: HourEnum = Query(default=HourEnum.h13, description="開始小時"),
+    start_mm: MinuteSecondEnum = Query(default=MinuteSecondEnum.ms00, description="開始分鐘"),
+    end_date: DateEnum = Query(default=DateEnum.date1, description="結束日期"),
+    end_hh: HourEnum = Query(default=HourEnum.h13, description="結束小時"),
+    end_mm: MinuteSecondEnum = Query(default=MinuteSecondEnum.ms10, description="結束分鐘"),
+    metric: Metric = Query(default=Metric.voltage, description="選擇輸出的數據類型"),
+    mode: Mode = Query(default=Mode.interactive, description="輸出模式：static=靜態圖片, interactive=互動式網頁圖表")
+):
+    try:
+        all_data = []
+        for device_id in device_ids:
+            data = get_data_by_deviceID_and_time(
+                device_id.value,
+                start_date.value, start_hh.value, start_mm.value,
+                end_date.value, end_hh.value, end_mm.value
+            )
+            if not data:
+                continue
+            all_data.append((device_id.value, data))
+
+        if not all_data:
+            raise HTTPException(status_code=404, detail="沒有符合條件的資料")
+
+        saved_path = generate_metric_chart_3d(all_data, metric.value, mode.value, filename_prefix="3d_chart")
+
+        if mode == Mode.interactive:
+            with open(saved_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+
+        return {
+            "status": "success",
+            "mode": mode.value,
+            "metric": metric.value,
+            "message": "3D 圖表已產生",
+            "file_path": saved_path
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -92,3 +92,71 @@ def generate_metric_chart_interactive(data, device_id: str, metric: str, filenam
 
     webbrowser.open(f"file://{os.path.abspath(save_path)}")
     return save_path
+
+
+def generate_metric_chart_3d(all_data, metric: str, mode: str = "interactive", filename_prefix: str = "plc_3d_chart"):
+    """
+    all_data: List[(device_id, data)]
+    metric: "電壓(Voltage)" 或 "電流(Current)"
+    """
+    fig = go.Figure()
+
+    for device_id, data in all_data:
+        data.sort(key=lambda d: datetime.fromisoformat(d.timestamp.replace("Z", "+00:00")))
+
+        timestamps = [datetime.fromisoformat(d.timestamp.replace("Z", "+00:00")) for d in data]
+        values = [d.voltage if metric == "電壓(Voltage)" else d.current for d in data]
+        y_vals = [device_id] * len(values)
+
+        # 僅顯示時間 HH:MM
+        x_labels = [dt.strftime("%H:%M:%S") for dt in timestamps]
+
+        fig.add_trace(go.Scatter3d(
+            x=x_labels,
+            y=y_vals,
+            z=values,
+            mode="lines+markers",
+            name=device_id,
+            marker=dict(size=3),  # 縮小點
+            line=dict(width=2)
+        ))
+
+    baseline = 220 if metric == "電壓(Voltage)" else 5.0
+    fig.add_trace(go.Scatter3d(
+        x=[timestamps[0], timestamps[-1]],
+        y=[device_id for device_id, _ in all_data],
+        z=[baseline, baseline],
+        mode="lines",
+        line=dict(color="red", dash="dash"),
+        name=f"基準線 {baseline}"
+    ))
+
+    fig.update_layout(
+        title=f"多設備 {metric} 3D 折線圖",
+        scene=dict(
+            xaxis_title="時間",
+            yaxis_title="Device ID",
+            zaxis_title=metric
+        ),
+        template="plotly_white"
+    )
+
+    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+
+    if mode == "interactive":
+        filename = f"{filename_prefix}_{metric}_{now_str}.html"
+        save_path = os.path.join(IMAGES_DIR, filename)
+        fig.write_html(save_path)
+        webbrowser.open(f"file://{os.path.abspath(save_path)}")
+
+    else:
+        try:
+            import kaleido  # Plotly 靜態輸出套件
+        except ImportError:
+            raise RuntimeError("請安裝 kaleido：pip install kaleido")
+        filename = f"{filename_prefix}_{metric}_{now_str}.png"
+        save_path = os.path.join(IMAGES_DIR, filename)
+        fig.write_image(save_path, format="png")
+
+    return save_path
