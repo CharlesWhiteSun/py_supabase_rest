@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, Query
 from enum import Enum
 from typing import Optional
 from py_supabase_rest.app.services.plc_device_service import get_data_by_deviceID_and_time
-from py_supabase_rest.app.services.plc_chart_service import generate_metric_chart_and_save
+from py_supabase_rest.app.services.plc_chart_service import generate_metric_chart_and_save, generate_metric_chart_interactive
+from fastapi.responses import HTMLResponse
 
 router = APIRouter(
     prefix="/plc-chart",
@@ -111,6 +112,10 @@ class MinuteSecondEnum(str, Enum):
     ms58 = "58"
     ms59 = "59"
 
+class Mode(str, Enum):
+    static = "static"
+    interactive = "interactive"
+
 @router.get(
     "/device-line_drawing", 
     summary="產生 PLC Device 電壓與電流圖表", 
@@ -124,7 +129,8 @@ async def get_device_line_drawing(
     end_date: DateEnum = Query(default=DateEnum.date1, description="結束日期"),
     end_hh: HourEnum = Query(default=HourEnum.h13, description="結束小時"),
     end_mm: MinuteSecondEnum = Query(default=MinuteSecondEnum.ms10, description="結束分鐘"),
-    metric: Metric = Query(default=Metric.voltage, description="選擇輸出的數據類型")
+    metric: Metric = Query(default=Metric.voltage, description="選擇輸出的數據類型"),
+    mode: Mode = Query(default=Mode.static, description="輸出模式：static=靜態圖片, interactive=互動式網頁圖表")
 ):
     """
     依 device_id 與時間區間，產生電壓或電流的線圖，存圖並回傳檔案路徑
@@ -139,15 +145,27 @@ async def get_device_line_drawing(
         if not data:
             raise HTTPException(status_code=404, detail="沒有符合條件的資料")
 
-        saved_path = generate_metric_chart_and_save(
-            data, device_id.value, metric.value, filename_prefix=f"線條圖_{device_id.value}"
-        )
+        if mode == Mode.static:
+            saved_path = generate_metric_chart_and_save(
+                data, device_id.value, metric.value, filename_prefix=f"線條圖_{device_id.value}"
+            )
+            return {
+                "status": "success",
+                "mode": mode.value,
+                "metric": metric.value,
+                "message": "圖表已儲存 (PNG)",
+                "file_path": saved_path
+            }
 
-        return {
-            "status": "success",
-            "metric": metric.value, # 回傳中文方便 UI 顯示
-            "message": "圖表已儲存",
-            "file_path": saved_path
-        }
+        elif mode == Mode.interactive:
+            saved_path = generate_metric_chart_interactive(
+                data, device_id.value, metric.value, filename_prefix=f"線條圖_{device_id.value}"
+            )
+            # 直接回傳 HTML 頁面
+            with open(saved_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return HTMLResponse(content=html_content)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

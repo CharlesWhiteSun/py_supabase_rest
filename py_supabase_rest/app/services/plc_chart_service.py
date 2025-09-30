@@ -1,9 +1,12 @@
 import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from datetime import datetime, timedelta
+import plotly.graph_objects as go
+import webbrowser
+from datetime import datetime
 
 IMAGES_DIR = "images"
+INTERACTIVE_DIR = "interactive"
 
 def generate_metric_chart_and_save(data, device_id: str, metric: str, filename_prefix: str = "plc_image"):
     """
@@ -16,7 +19,6 @@ def generate_metric_chart_and_save(data, device_id: str, metric: str, filename_p
     # 保留 datetime 作為 x 軸
     timestamps = []
     for d in data:
-        # 確保轉成 datetime，並加 +8 小時
         dt = datetime.fromisoformat(d.timestamp.replace("Z", "+00:00"))
         timestamps.append(dt)
 
@@ -56,4 +58,37 @@ def generate_metric_chart_and_save(data, device_id: str, metric: str, filename_p
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()
 
+    return save_path
+
+
+def generate_metric_chart_interactive(data, device_id: str, metric: str, filename_prefix: str = "plc_interactive"):
+    """
+    依照 metric (voltage 或 current) 產生互動式 HTML 圖表，並存到 images 資料夾
+    """
+    if not data:
+        raise ValueError("沒有資料可繪製圖表")
+
+    timestamps = [datetime.fromisoformat(d.timestamp.replace("Z", "+00:00")) for d in data]
+    values = [d.voltage if metric == "電壓(Voltage)" else d.current for d in data]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=timestamps, y=values, mode="lines+markers", name=metric))
+
+    baseline = 220 if metric == "電壓(Voltage)" else 5.0
+    fig.add_hline(y=baseline, line_dash="dash", line_color="red", annotation_text=f"基準線 {baseline}")
+
+    fig.update_layout(
+        title=f"{device_id} {metric} 互動式線圖",
+        xaxis_title="時間",
+        yaxis_title=metric,
+        template="plotly_white"
+    )
+
+    now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{filename_prefix}_{metric}_{now_str}.html"
+    save_path = os.path.join(IMAGES_DIR, filename)
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    fig.write_html(save_path)
+
+    webbrowser.open(f"file://{os.path.abspath(save_path)}")
     return save_path
