@@ -5,3 +5,7 @@ class PLCData(BaseModel):
     voltage: float
     current: float
     timestamp: str
+    date: str
+    hh: str
+    mm: str
+    ss: str

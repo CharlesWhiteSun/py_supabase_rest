@@ -13,35 +13,134 @@ class Metric(str, Enum):
     voltage = "電壓(Voltage)"
     current = "電流(Current)"
 
-METRIC_MAP = {
-    Metric.voltage.value: "voltage",
-    Metric.current.value: "current",
-}
+class DeviceID(str, Enum):
+    PLC_001 = "PLC-001"
+    PLC_006 = "PLC-006"
+    PLC_008 = "PLC-008"
+    PLC_010 = "PLC-010"
+
+class DateEnum(str, Enum):
+    date1 = "2025-09-30"
+    date2 = "2025-10-01"
+
+class HourEnum(str, Enum):
+    h00 = "00"
+    h01 = "01"
+    h02 = "02"
+    h03 = "03"
+    h04 = "04"
+    h05 = "05"
+    h06 = "06"
+    h07 = "07"
+    h08 = "08"
+    h09 = "09"
+    h10 = "10"
+    h11 = "11"
+    h12 = "12"
+    h13 = "13"
+    h14 = "14"
+    h15 = "15"
+    h16 = "16"
+    h17 = "17"
+    h18 = "18"
+    h19 = "19"
+    h20 = "20"
+    h21 = "21"
+    h22 = "22"
+    h23 = "23"
+
+class MinuteSecondEnum(str, Enum):
+    ms00 = "00"
+    ms01 = "01"
+    ms02 = "02"
+    ms03 = "03"
+    ms04 = "04"
+    ms05 = "05"
+    ms06 = "06"
+    ms07 = "07"
+    ms08 = "08"
+    ms09 = "09"
+    ms10 = "10"
+    ms11 = "11"
+    ms12 = "12"
+    ms13 = "13"
+    ms14 = "14"
+    ms15 = "15"
+    ms16 = "16"
+    ms17 = "17"
+    ms18 = "18"
+    ms19 = "19"
+    ms20 = "20"
+    ms21 = "21"
+    ms22 = "22"
+    ms23 = "23"
+    ms24 = "24"
+    ms25 = "25"
+    ms26 = "26"
+    ms27 = "27"
+    ms28 = "28"
+    ms29 = "29"
+    ms30 = "30"
+    ms31 = "31"
+    ms32 = "32"
+    ms33 = "33"
+    ms34 = "34"
+    ms35 = "35"
+    ms36 = "36"
+    ms37 = "37"
+    ms38 = "38"
+    ms39 = "39"
+    ms40 = "40"
+    ms41 = "41"
+    ms42 = "42"
+    ms43 = "43"
+    ms44 = "44"
+    ms45 = "45"
+    ms46 = "46"
+    ms47 = "47"
+    ms48 = "48"
+    ms49 = "49"
+    ms50 = "50"
+    ms51 = "51"
+    ms52 = "52"
+    ms53 = "53"
+    ms54 = "54"
+    ms55 = "55"
+    ms56 = "56"
+    ms57 = "57"
+    ms58 = "58"
+    ms59 = "59"
 
 @router.get(
-    "/device-status", 
+    "/device-line_drawing", 
     summary="產生 PLC Device 電壓與電流圖表", 
     description="可選擇輸出電壓或電流，存圖並回傳成功訊息"
 )
-async def get_device_status_line_drawing(
-    device_id: str = Query(default="PLC-001", description="裝置 ID"),
-    start_time: Optional[str] = Query(default="2025-09-30T13:00:00", description="開始時間 (ISO 格式)"),
-    end_time: Optional[str] = Query(default="2025-09-30T13:10:00", description="結束時間 (ISO 格式)"),
+async def get_device_line_drawing(
+    device_id: DeviceID = Query(default=DeviceID.PLC_001, description="裝置 ID"),
+    start_date: DateEnum = Query(default=DateEnum.date1, description="開始日期"),
+    start_hh: HourEnum = Query(default=HourEnum.h13, description="開始小時"),
+    start_mm: MinuteSecondEnum = Query(default=MinuteSecondEnum.ms00, description="開始分鐘"),
+    end_date: DateEnum = Query(default=DateEnum.date1, description="結束日期"),
+    end_hh: HourEnum = Query(default=HourEnum.h13, description="結束小時"),
+    end_mm: MinuteSecondEnum = Query(default=MinuteSecondEnum.ms10, description="結束分鐘"),
     metric: Metric = Query(default=Metric.voltage, description="選擇輸出的數據類型")
 ):
     """
     依 device_id 與時間區間，產生電壓或電流的線圖，存圖並回傳檔案路徑
     """
     try:
-        data = get_data_by_deviceID_and_time(device_id, start_time, end_time)
+        data = get_data_by_deviceID_and_time(
+            device_id.value,
+            start_date.value, start_hh.value, start_mm.value,
+            end_date.value, end_hh.value, end_mm.value
+        )
 
         if not data:
             raise HTTPException(status_code=404, detail="沒有符合條件的資料")
 
-        metric_key = METRIC_MAP[metric.value]
-
         saved_path = generate_metric_chart_and_save(
-            data, metric_key, filename_prefix=f"{device_id}_線條圖"
+            data, device_id.value, metric.value, filename_prefix=f"線條圖_{device_id.value}"
         )
 
         return {
