@@ -16,7 +16,7 @@ Key Features:
 Installation:
 
 1. Clone the repository:
-   git clone https://github.com/yourusername/py_supabase_rest.git
+   git clone https://github.com/charleswhitesun/py_supabase_rest.git
 
 2. Navigate to project folder:
    cd py_supabase_rest
