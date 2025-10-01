@@ -19,20 +19,20 @@ def process_csv():
 
         for row in reader:
             try:
-                device_id = row[1]  # 第2欄 device_id
-                voltage = row[2]    # 第3欄 voltage
-                current = row[3]    # 第4欄 current
-                timestamp_str = row[4]  # timestamp
+                device_id = row[0]   # ✅ 修正 index
+                voltage = row[1]
+                current = row[2]
+                timestamp_str = row[3]
 
-                # 轉換 timestamp
-                dt = datetime.fromisoformat(timestamp_str.replace("+00", "")) + timedelta(hours=8)
+                # 轉換 timestamp (+8 小時，台灣時區)
+                dt = datetime.fromisoformat(timestamp_str.replace("+0000", "")) + timedelta(hours=8)
 
-                date = dt.strftime("%Y-%m-%d") 
+                date = dt.strftime("%Y-%m-%d")
                 hh = dt.strftime("%H")
                 mm = dt.strftime("%M")
                 ss = dt.strftime("%S")
 
-                writer.writerow([device_id, voltage, current, dt, date, hh, mm, ss])
+                writer.writerow([device_id, voltage, current, dt.isoformat(), date, hh, mm, ss])
 
             except Exception as e:
                 print(f"Error processing row: {row}, error: {e}")

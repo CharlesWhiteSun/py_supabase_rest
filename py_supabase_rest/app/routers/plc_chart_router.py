@@ -1,7 +1,7 @@
 from enum import Enum
+from datetime import datetime
 from typing import List
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import HTMLResponse
 from py_supabase_rest.app.services.plc_device_service import get_data_by_deviceID_and_time
 from py_supabase_rest.app.services.plc_chart_service import (
     generate_metric_chart_and_save, 
@@ -153,22 +153,21 @@ async def get_device_line_drawing(
             saved_path = generate_metric_chart_and_save(
                 data, device_id.value, metric.value, filename_prefix=f"線條圖_{device_id.value}"
             )
-            return {
-                "status": "success",
-                "mode": mode.value,
-                "metric": metric.value,
-                "message": "圖表已儲存 (PNG)",
-                "file_path": saved_path
-            }
-
         elif mode == Mode.interactive:
             saved_path = generate_metric_chart_interactive(
                 data, device_id.value, metric.value, filename_prefix=f"線條圖_{device_id.value}"
             )
             # 直接回傳 HTML 頁面
-            with open(saved_path, "r", encoding="utf-8") as f:
-                html_content = f.read()
-            return HTMLResponse(content=html_content)
+            import aiofiles
+            async with aiofiles.open(saved_path, "r", encoding="utf-8") as f:
+                await f.read()
+        
+        return {
+            "status": "success",
+            "mode": mode.value,
+            "metric": metric.value,
+            "message": "圖表已儲存(PNG)",
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -205,19 +204,21 @@ async def get_device_line_drawing_3d(
         if not all_data:
             raise HTTPException(status_code=404, detail="沒有符合條件的資料")
 
-        saved_path = generate_metric_chart_3d(all_data, metric.value, mode.value, filename_prefix="3d_chart")
+        x_label_start_time = datetime.fromisoformat(start_date + "T" + start_hh + ":" + start_mm + ":00")
+        x_label_end_time = datetime.fromisoformat(end_date + "T" + end_hh + ":" + end_mm + ":00")
+
+        saved_path = generate_metric_chart_3d(all_data, metric.value, mode.value, x_label_start_time, x_label_end_time, filename_prefix="3d_chart")
 
         if mode == Mode.interactive:
-            with open(saved_path, "r", encoding="utf-8") as f:
-                html_content = f.read()
-            return HTMLResponse(content=html_content)
+            import aiofiles
+            async with aiofiles.open(saved_path, "r", encoding="utf-8") as f:
+                await f.read()
 
         return {
             "status": "success",
             "mode": mode.value,
             "metric": metric.value,
-            "message": "3D 圖表已產生",
-            "file_path": saved_path
+            "message": "3D 圖表已產生(Html)",
         }
 
     except Exception as e:

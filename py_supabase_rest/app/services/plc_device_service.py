@@ -23,7 +23,12 @@ def get_data_by_deviceID_and_time(
     query = query.gte("date", start_date).lte("date", end_date)
     query = query.gte("hh", start_hh).lte("hh", end_hh)
     query = query.gte("mm", start_mm).lte("mm", end_mm)
-    query = query.order("date", desc=False).order("hh", desc=False).order("mm", desc=False)
+    # 排序確保時間正確
+    query = query.order("date", desc=False)\
+                .order("hh", desc=False)\
+                .order("mm", desc=False)\
+                .order("ss", desc=False)
+    
     response = query.execute()
 
     if not hasattr(response, "data") or not isinstance(response.data, list):
